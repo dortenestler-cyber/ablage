@@ -1,4 +1,4 @@
-const V='ablage-v2';const FILES=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png','./apple-touch-icon.png','./css/app.css?v=2','./js/01-core.js?v=2','./js/02-sync.js?v=2','./js/03-views.js?v=2'];
+const V='ablage-v3';const FILES=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png','./apple-touch-icon.png','./css/app.css?v=3','./js/01-core.js?v=3','./js/02-sync.js?v=3','./js/03-views.js?v=3'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(V).then(c=>c.addAll(FILES.map(f=>new Request(f,{cache:'reload'})))));self.skipWaiting()});
 /* Nur eigene Caches (Präfix ablage-) aufräumen: CashFlow liegt am selben Ursprung. */
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x.startsWith('ablage-')&&x!==V).map(x=>caches.delete(x)))).then(()=>self.clients.claim()))});

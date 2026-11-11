@@ -1,6 +1,6 @@
 /* Ablage – Kern: Zustand, Hilfen, Symbole, Penny, Rückmeldungen */
 'use strict';
-const VER=2;
+const VER=3;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);

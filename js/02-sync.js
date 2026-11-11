@@ -48,7 +48,7 @@ async function syLogin(f){const url=(f.url||SYDEF).trim().replace(/\/$/,''),key=
   cfTake(cfData)}catch(e){SY.refresh=null;SY.access=null;sySave();throw e}
   await sync(true);docFlush()}
 
-async function syLogout(wipe){try{await syFetch('/auth/v1/logout',{method:'POST'})}catch(e){}
+async function syLogout(wipe){try{await syFetch('/auth/v1/logout?scope=local',{method:'POST'})}catch(e){}
   SY={url:SY.url,key:SY.key,email:SY.email};syKey=null;sySave();
   if(wipe){A={docs:[],base:null,cfg:A.cfg,ki:{},v:1};CF={contracts:[],paid:{},at:0};await kvPut('state',A);await kvPut('cf',CF);await tx('f','readwrite',s=>s.clear());await tx('q','readwrite',s=>s.clear())}
   render()}
