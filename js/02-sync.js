@@ -86,7 +86,7 @@ function syncSoon(){clearTimeout(syTimer);if(syOn())syTimer=setTimeout(()=>sync(
 /* CashFlow-Daten lesen (nur lesen): Verträge zum Verknüpfen, Buchungen mit e.ab für „bezahlt/erstattet“ */
 async function cfLoad(){try{const r=await syFetch('/rest/v1/cashflow?select=data,iv&user_id=eq.'+SY.uid);if(!r.ok)return;const row=(await r.json())[0];if(!row)return;cfTake(await syDec(row))}catch(e){}}
 function cfTake(S){const C=(S.contracts||[]).map(c=>({id:c.id,n:c.n,prov:c.prov||'',start:c.start,next:c.next,renew:c.renew,term:c.term,notice:c.notice,state:c.state,auto:c.auto,cost:c.cost}));
-  const paid={};(S.exp||[]).forEach(e=>{if(e&&e.ab)paid[e.ab]={dt:e.dt||e.t,a:e.a,n:e.n}});
+  const paid={};(S.exp||[]).forEach(e=>{if(e&&e.ab)paid[e.ab]={dt:e.t?ymd(e.t):String(e.dt||'').slice(0,10),a:e.a,n:e.n}});
   const rid={};(S.rec||[]).forEach(r=>{if(r&&r.id)rid[r.id]={a:r.a,every:r.every||1}});
   C.forEach(c=>{const x=(S.contracts||[]).find(z=>z.id==c.id);if(x&&x.rid&&rid[x.rid])c.mon=rid[x.rid].a/rid[x.rid].every});
   CF={contracts:C,paid,at:Date.now()};kvPut('cf',CF).catch(()=>{})}
@@ -96,7 +96,7 @@ function contractNext(c){const now=new Date();if(c.state=='cancelled')return{d:n
   while(d<now&&g++<600)d=addPer(d,st);let kd=c.notice?addPer(d,c.notice,-1):null;while(kd&&kd<now&&g++<600){d=addPer(d,st);kd=addPer(d,c.notice,-1)}return{d,kd}}
 const cfCtr=id=>CF.contracts.find(c=>c.id==id);
 /* Status mit CashFlow abgeleitet: Buchung mit e.ab=<docId> heißt bezahlt bzw. erstattet */
-function effStatus(d){const p=CF.paid[d.id];if(p&&(d.art=='rechnung'||d.art=='reise'))return{s:d.art=='reise'?'erstattet':'bezahlt',cf:p};return{s:d.status||'offen',cf:null}}
+function effStatus(d){const p=CF.paid[d.id];if(p&&(d.art=='rechnung'||d.art=='reise'||d.art=='gehalt'))return{s:d.art=='reise'?'erstattet':d.art=='gehalt'?'übertragen':'bezahlt',cf:p};if(d.art=='gehalt')return{s:'offen',cf:null};return{s:d.status||'offen',cf:null}}
 
 /* ---------- Dateien ---------- */
 const fPath=id=>SY.uid+'/a/'+id;   // Unterordner a/: CashFlow-Aufräumen listet nur die oberste Ebene (Ordner haben id:null)
@@ -133,9 +133,9 @@ const AIPRICE={'claude-haiku-5-5':[.10,.50],'claude-sonnet-5-5':[2,10]};
 const kiUse=()=>{const ym=ymd(Date.now()).slice(0,7);if(!A.ki||A.ki.ym!=ym)A.ki={ym,usd:0,n:0};return A.ki};
 const kiOn=()=>A.cfg.ki!==false&&syOn()&&navigator.onLine!==false;
 const KISCH={type:'object',additionalProperties:false,
-  required:['art','titel','absender','datum','betrag','faellig','iban','verwendungszweck','vertragsnr','kuendigen_bis','garantie_bis','gueltig_bis','frist','anlass','kurz','tags'],
+  required:['art','titel','absender','datum','betrag','brutto','jahresbrutto','monat','faellig','iban','verwendungszweck','vertragsnr','kuendigen_bis','garantie_bis','gueltig_bis','frist','anlass','kurz','tags'],
   properties:{art:{type:'string',enum:ARTEN.map(a=>a.k)},titel:{type:'string',description:'kurz, z. B. "Stromrechnung Oktober"'},absender:{type:'string'},datum:{type:'string',description:'Dokumentdatum YYYY-MM-DD oder leer'},
-   betrag:{type:'number',description:'Gesamtbetrag in Euro, 0 wenn keiner'},faellig:{type:'string',description:'Zahlungsziel YYYY-MM-DD oder leer'},iban:{type:'string'},verwendungszweck:{type:'string'},vertragsnr:{type:'string'},
+   betrag:{type:'number',description:'Gesamtbetrag in Euro; bei Gehaltsnachweis der Netto-Auszahlungsbetrag; 0 wenn keiner'},brutto:{type:'number',description:'nur Gehaltsnachweis: Brutto des Monats, sonst 0'},jahresbrutto:{type:'number',description:'nur Gehaltsnachweis: steuer- bzw. zusatzversorgungspflichtiges Brutto des Jahres bis dahin (Jahressumme), sonst 0'},monat:{type:'string',description:'nur Gehaltsnachweis: Abrechnungsmonat YYYY-MM, sonst leer'},faellig:{type:'string',description:'Zahlungsziel YYYY-MM-DD oder leer'},iban:{type:'string'},verwendungszweck:{type:'string'},vertragsnr:{type:'string'},
    kuendigen_bis:{type:'string',description:'letzter Kündigungstag YYYY-MM-DD oder leer'},garantie_bis:{type:'string'},gueltig_bis:{type:'string',description:'Ablauf eines Ausweises/Dokuments YYYY-MM-DD oder leer'},
    frist:{type:'string',description:'sonstige Frist (Widerspruch, Antwort) YYYY-MM-DD oder leer'},anlass:{type:'string',description:'nur bei Reisekosten'},kurz:{type:'string',description:'ein Satz Inhalt für die Suche'},tags:{type:'array',items:{type:'string'}}}};
 async function kiRead(d){if(!await syLoadKey())throw new Error('Bitte erst anmelden.');const files=(d.files||[]).slice(0,3),content=[];
@@ -143,7 +143,7 @@ async function kiRead(d){if(!await syLoadKey())throw new Error('Bitte erst anmel
     if(f.typ=='pdf'){if(b.size>4.5*1048576)continue;content.push({type:'document',source:{type:'base64',media_type:'application/pdf',data:(await readURL(b)).split(',')[1]}});break}
     const cv=await fImg(URL.createObjectURL(b),1568);content.push({type:'image',source:{type:'base64',media_type:'image/jpeg',data:cv.toDataURL('image/jpeg',.8).split(',')[1]}})}
   if(!content.length)throw new Error('Keine lesbare Seite gefunden.');
-  content.push({type:'text',text:'Heute ist '+ymd(Date.now())+'. Lies dieses deutsche Dokument und fülle die Felder. Art: vertrag, rechnung, brief (Bescheid/Brief), garantie (Garantie/Kaufbeleg), reise (Reisekostenabrechnung), pers (Ausweis, Urkunde, Zeugnis), sonst. Unbekanntes leer bzw. 0. Daten als YYYY-MM-DD. Erfinde nichts.'});
+  content.push({type:'text',text:'Heute ist '+ymd(Date.now())+'. Lies dieses deutsche Dokument und fülle die Felder. Art: vertrag, rechnung, brief (Bescheid/Brief), garantie (Garantie/Kaufbeleg), reise (Reisekostenabrechnung), pers (Ausweis, Urkunde, Zeugnis), gehalt (Gehalts-/Entgeltabrechnung), sonst. Unbekanntes leer bzw. 0. Daten als YYYY-MM-DD. Erfinde nichts.'});
   const model=A.cfg.model||'claude-haiku-5-5',u=kiUse();
   const r=await syFetch('/functions/v1/ai',{method:'POST',body:JSON.stringify({op:'chat',req:{model,max_tokens:1500,messages:[{role:'user',content}],output_config:{effort:'low',format:{type:'json_schema',schema:KISCH}}}})});
   let j={};try{j=await r.json()}catch(e){}
@@ -156,7 +156,7 @@ function kiApply(d,k){let n=0;const iso=s=>/^\d{4}-\d{2}-\d{2}$/.test(s||'')?s:'
   const set=(f,v)=>{if(v==null||v===''||v===0)return;if(d[f]==null||d[f]===''||d[f]===0){d[f]=v;n++}};
   if(!d.art||(d.art=='sonst'&&k.art))d.art=k.art||d.art||'sonst';
   set('titel',k.titel);set('abs',k.absender);set('datum',iso(k.datum));set('betrag',k.betrag>0?Math.round(k.betrag*100)/100:0);set('faellig',iso(k.faellig));set('iban',(k.iban||'').replace(/\s+/g,' ').trim());
-  set('vz',k.verwendungszweck);set('vnr',k.vertragsnr);if(!d.ctr)set('kfrist',iso(k.kuendigen_bis));set('gbis',iso(k.garantie_bis));set('gueltig',iso(k.gueltig_bis));set('frist',iso(k.frist));set('anlass',k.anlass);
+  set('vz',k.verwendungszweck);set('vnr',k.vertragsnr);if(!d.ctr)set('kfrist',iso(k.kuendigen_bis));set('gbis',iso(k.garantie_bis));set('gueltig',iso(k.gueltig_bis));set('frist',iso(k.frist));set('anlass',k.anlass);if(d.art=='gehalt'){set('brutto',k.brutto>0?Math.round(k.brutto*100)/100:0);set('monat',/^\d{4}-\d{2}$/.test(k.monat||'')?k.monat:'');if(String(d.monat||'').slice(5)=='12')set('jb',k.jahresbrutto>0?Math.round(k.jahresbrutto):0)}
   if(k.kurz)d.kurz=k.kurz;if(Array.isArray(k.tags)&&k.tags.length&&!(d.tags||[]).length){d.tags=k.tags.slice(0,6).map(s=>String(s).slice(0,30));n++}
   if((d.art=='rechnung'||d.art=='reise')&&!d.status)d.status='offen';return n}
 

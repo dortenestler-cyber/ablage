@@ -10,6 +10,7 @@ function fristen(){const L=[];
     else if(d.art=='garantie'&&d.gbis)add(d.gbis,'Garantie endet');
     else if(d.art=='pers'&&d.gueltig)add(d.gueltig,'Läuft ab');
     else if(d.art=='reise'){const s=effStatus(d).s;if(s=='offen')add(null,'Noch einreichen'+(d.betrag?' · '+eur(d.betrag):''));else if(s=='eingereicht')add(null,'Erstattung offen'+(d.betrag?' · '+eur(d.betrag):'')+(d.eing?' · eingereicht '+dShort(d.eing):''))}
+    else if(d.art=='gehalt'&&d.betrag&&!effStatus(d).cf)add(null,'Noch nach CashFlow übertragen · '+eur(d.betrag));
     if((d.art=='brief'||d.art=='sonst')&&d.frist)add(d.frist,'Frist')});
   return L.sort((a,b)=>(a.dt?pD(a.dt):9e15)-(b.dt?pD(b.dt):9e15))}
 const amp=dl=>dl==null?'var(--muted)':dl<=7?'var(--bad)':dl<=30?'var(--warn)':'var(--ok)';
@@ -17,7 +18,8 @@ const dlTxt=dl=>dl==null?'':dl<0?'seit '+(-dl)+(dl==-1?' Tag':' Tagen')+' vorbei
 
 /* ---------- Zellen ---------- */
 function docIcon(d){const th=(d.files||[]).find(f=>f.th);return th?`<img class="thumb" src="${th.th}" alt="">`:`<span class="ico" style="--c:var(--${d.art||'sonst'})">${I(d.art||'sonst')}</span>`}
-function docBadge(d){if(d.art=='rechnung'||d.art=='reise'){const e=effStatus(d);
+function docBadge(d){if(d.art=='gehalt'){const e=effStatus(d);return e.cf?'<span class="badge ok">übertragen</span>':(d.betrag?'<span class="badge mute">nicht übertragen</span>':'')}
+  if(d.art=='rechnung'||d.art=='reise'){const e=effStatus(d);
     if(e.s=='bezahlt'||e.s=='erstattet')return `<span class="badge ok">${e.s}</span>`;if(e.s=='strittig')return '<span class="badge warn">strittig</span>';
     if(d.art=='rechnung'&&d.faellig){const dl=daysTo(d.faellig);return `<span class="badge ${dl<=7?'bad':'warn'}">${dl<0?'überfällig':dl==0?'heute':dl+' T.'}</span>`}
     return `<span class="badge mute">${e.s}</span>`}
@@ -127,7 +129,8 @@ function openDoc(id){const d=docById(id);if(!d){tell('Dokument nicht gefunden.',
 function newDoc(){ED={id:uid(),art:'sonst',titel:'',datum:ymd(Date.now()),files:[],tags:[],c:Date.now()};window.ED=ED;edNew=true;edDel=false;drawSheet()}
 function closeSheet(){$('sheetRoot').innerHTML='';ED=null;window.ED=null;if(location.hash)history.replaceState(null,'',location.pathname+location.search)}
 function fieldRow(f){const[k,lab,t,ph,only]=f;if(only&&!only(ED))return'';const v=ED[k]==null?'':ED[k];
-  if(t=='date')return `<div class="cell plain"><label for="f_${k}">${lab}</label><input id="f_${k}" data-k="${k}" type="date" value="${esc(v)}"></div>`;
+  if(t=='date'||t=='month')return `<div class="cell plain"><label for="f_${k}">${lab}</label><input id="f_${k}" data-k="${k}" type="${t}" value="${esc(v)}"></div>`;
+  if(t=='cfx'){const e=effStatus(ED);return `<div class="cell col">${e.cf?`<div class="s w">In CashFlow gebucht am ${dShort(e.cf.dt)} · ${eur(e.cf.a)}</div>`:''}<button class="btn soft" id="cfGo"${ED.betrag>0?'':' disabled'}>${I('link',18)} ${e.cf?'In CashFlow korrigieren':'Nach CashFlow übertragen'}</button><div class="s w">Netto wird dort als Gehalt gebucht (du bestätigst), Jahresbrutto auf Wunsch in die Zusatzversorgung.</div></div>`}
   if(t=='eur')return `<div class="cell plain"><label for="f_${k}">${lab}</label><input id="f_${k}" data-k="${k}" data-t="eur" inputmode="decimal" placeholder="0,00 €" value="${v?esc((+v).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2,useGrouping:false})):''}"></div>`;
   if(t=='bool')return `<div class="cell plain"><div class="t"><div>${lab}</div><div class="s w">Erscheint in CashFlow als geplanter Betrag, nicht gebucht</div></div><input type="checkbox" class="switch" data-k="${k}" data-t="bool" ${v?'checked':''}></div>`;
   if(t=='status'){const e=effStatus(ED);return `<div class="cell plain"><div class="t">${lab}${e.cf?`<div class="s">In CashFlow gebucht am ${dShort(String(e.cf.dt).slice(0,10))}</div>`:''}</div><div class="seg">${STAT[ED.art].map(([s,n])=>`<button data-st="${s}" class="${e.s==s?'on':''}"${e.cf?' disabled':''}>${n}</button>`).join('')}</div></div>`}
@@ -152,7 +155,7 @@ function drawSheet(){const d=ED,F=FIELDS[d.art]||[],canKI=(d.files||[]).length&&
    ${edNew?'':`<button class="btn danger" id="shD">${edDel?'Wirklich löschen? Nochmal tippen':'Dokument löschen'}</button>`}
   </div></div>`;
   const on=(id,f)=>{const e=$(id);if(e)e.onclick=f};
-  on('shX',tryClose);on('shC',tryClose);on('shS',saveDoc);on('kiGo',kiGo);
+  on('shX',tryClose);on('shC',tryClose);on('shS',saveDoc);on('cfGo',cfGehalt);on('kiGo',kiGo);
   on('shD',()=>{if(!edDel){edDel=true;drawSheet();return}delDoc(ED.id)});
   on('pgAdd',()=>{const p=$('pick');p.value='';p.click()});
   document.querySelectorAll('[data-rm]').forEach(b=>b.onclick=e=>{e.stopPropagation();ED.files.splice(+b.dataset.rm,1);drawSheet()});
@@ -168,6 +171,9 @@ function saveDoc(){const d=ED;if(!d.titel)d.titel=[ARTN[d.art],d.abs||d.anlass||
   if(!(d.files||[]).length&&!d.titel){tell('Ein Titel oder eine Seite fehlt noch.',{m:'denkt'});return}
   touch(d);const i=A.docs.findIndex(x=>x.id==d.id);if(i>=0)A.docs[i]=d;else A.docs.unshift(d);
   save();closeSheet();render();tell('')}
+function cfGehalt(){const d=ED;if(!(d.betrag>0))return;const dt=d.ausz||(d.monat?d.monat+'-28':d.datum)||ymd(Date.now());
+  saveDoc();const o={id:d.id,netto:d.betrag,dt,arb:d.abs||'',brutto:d.brutto||0,jb:d.jb||0};
+  CF.at=0;kvPut('cf',CF).catch(()=>{});location.href='../cashflow-app/#ab-gehalt='+encodeURIComponent(JSON.stringify(o))}
 function delDoc(id){const d=A.docs.find(x=>x.id==id);if(!d)return;d.del=Date.now();touch(d);save();closeSheet();render();
   tell('Gelöscht: <b>'+esc(d.titel||ARTN[d.art])+'</b>',{m:'oops',undo:()=>{delete d.del;touch(d);save();render()}})}
 async function kiGo(){if(busy.ki)return;if(!kiOn()){tell(syOn()?'Offline: KI-Auslesen geht nur mit Verbindung.':'Für die KI bitte erst anmelden.',{m:'denkt'});return}

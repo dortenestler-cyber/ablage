@@ -1,6 +1,6 @@
 /* Ablage – Kern: Zustand, Hilfen, Symbole, Penny, Rückmeldungen */
 'use strict';
-const VER=1;
+const VER=2;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
@@ -26,6 +26,7 @@ const IC={
  brief:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',
  garantie:'<path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/>',
  reise:'<path d="M3 15l18-6-4 10-5-3-2 4-1-5z"/>',
+ gehalt:'<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M16 14.5h2"/><path d="M7 6V4.5A1.5 1.5 0 0 1 8.5 3h7A1.5 1.5 0 0 1 17 4.5V6"/>',
  pers:'<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2.2"/><path d="M5.5 16.5c.8-1.6 2-2.4 3.5-2.4s2.7.8 3.5 2.4M14 10h4M14 13h3"/>',
  sonst:'<path d="M7 3h7l5 5v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v5h5"/>',
  search:'<circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/>',
@@ -46,7 +47,7 @@ const I=(n,s)=>`<svg class="i" viewBox="0 0 24 24"${s?` style="width:${s}px;heig
 /* Arten und ihre Felder. key: Feldname im Dokument, t: Typ (text|date|eur|status|ctr|bool|area), only: nur wenn Bedingung */
 const ARTEN=[
  {k:'vertrag',n:'Vertrag',p:'Verträge'},{k:'rechnung',n:'Rechnung',p:'Rechnungen'},{k:'brief',n:'Bescheid/Brief',p:'Briefe'},
- {k:'garantie',n:'Garantie/Kaufbeleg',p:'Garantien'},{k:'reise',n:'Reisekosten',p:'Reisekosten'},{k:'pers',n:'Persönliches',p:'Persönliches'},{k:'sonst',n:'Sonstiges',p:'Sonstiges'}];
+ {k:'garantie',n:'Garantie/Kaufbeleg',p:'Garantien'},{k:'gehalt',n:'Gehaltsnachweis',p:'Gehalt'},{k:'reise',n:'Reisekosten',p:'Reisekosten'},{k:'pers',n:'Persönliches',p:'Persönliches'},{k:'sonst',n:'Sonstiges',p:'Sonstiges'}];
 const ARTN=Object.fromEntries(ARTEN.map(a=>[a.k,a.n]));
 const STAT={rechnung:[['offen','offen'],['bezahlt','bezahlt'],['strittig','strittig']],reise:[['offen','offen'],['eingereicht','eingereicht'],['erstattet','erstattet']]};
 const FIELDS={
@@ -54,6 +55,7 @@ const FIELDS={
  rechnung:[['abs','Absender','text'],['betrag','Betrag','eur'],['faellig','Fällig am','date'],['iban','IBAN','text'],['vz','Verwendungszweck','text'],['status','Status','status'],['plan','In Prognose einplanen','bool']],
  brief:[['abs','Absender','text'],['frist','Frist','date','Antwort bis']],
  garantie:[['abs','Händler','text'],['geraet','Gerät','text'],['betrag','Kaufpreis','eur'],['gbis','Garantie bis','date']],
+ gehalt:[['abs','Arbeitgeber','text'],['monat','Abrechnungsmonat','month'],['brutto','Brutto','eur'],['betrag','Netto (Auszahlung)','eur'],['ausz','Ausgezahlt am','date'],['jb','Jahresbrutto','eur','laut Nachweis, sonst 12 × Brutto'],['cfx','','cfx']],
  reise:[['anlass','Anlass','text','Dienstreise …'],['von','Von','date'],['bis','Bis','date'],['betrag','Betrag','eur'],['eing','Eingereicht am','date'],['status','Status','status'],['plan','Erstattung einplanen','bool']],
  pers:[['abs','Aussteller','text','z. B. Stadt'],['gueltig','Gültig bis','date']],
  sonst:[['abs','Absender','text'],['frist','Frist','date']]

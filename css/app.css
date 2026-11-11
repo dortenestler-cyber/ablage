@@ -2,7 +2,7 @@
 :root{
   --accent:#2F6FEB; --accent-fill:#2F6FEB; --bg:#F3F6FB; --card:#ffffff; --fg:#141B2D; --muted:#6F7A90; --sep:#E4EAF4; --fill:#E7EDF8;
   --ok:#167F56; --warn:#E8961E; --bad:#E0445E; --tip:#E8F0FF; --scrim:rgba(10,15,30,.38);
-  --vertrag:#2F6FEB; --rechnung:#E0445E; --brief:#7A5AF8; --garantie:#22A699; --reise:#E8961E; --pers:#0E9FB5; --sonst:#6F7A90;
+  --vertrag:#2F6FEB; --rechnung:#E0445E; --brief:#7A5AF8; --garantie:#22A699; --reise:#E8961E; --gehalt:#16A34A; --pers:#0E9FB5; --sonst:#6F7A90;
   --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",system-ui,sans-serif;
   --round:-apple-system,"SF Pro Rounded",ui-rounded,system-ui,sans-serif;
   color-scheme:light;
@@ -10,11 +10,11 @@
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --accent:#7DB0FF; --accent-fill:#3B7BF0; --bg:#0A0E16; --card:#151B26; --fg:#EEF3FC; --muted:#9AA6BF; --sep:#232C3D; --fill:#222B3B;
   --ok:#3CCB92; --warn:#F5B355; --bad:#FF6B81; --tip:#16233D; --scrim:rgba(0,0,0,.6);
-  --vertrag:#7DB0FF; --rechnung:#FF6B81; --brief:#A48BFF; --garantie:#35C2B3; --reise:#F5B355; --pers:#43C6DB; --sonst:#9AA6BF; color-scheme:dark}}
+  --vertrag:#7DB0FF; --rechnung:#FF6B81; --brief:#A48BFF; --garantie:#35C2B3; --reise:#F5B355; --gehalt:#4ADE80; --pers:#43C6DB; --sonst:#9AA6BF; color-scheme:dark}}
 :root[data-theme="dark"]{
   --accent:#7DB0FF; --accent-fill:#3B7BF0; --bg:#0A0E16; --card:#151B26; --fg:#EEF3FC; --muted:#9AA6BF; --sep:#232C3D; --fill:#222B3B;
   --ok:#3CCB92; --warn:#F5B355; --bad:#FF6B81; --tip:#16233D; --scrim:rgba(0,0,0,.6);
-  --vertrag:#7DB0FF; --rechnung:#FF6B81; --brief:#A48BFF; --garantie:#35C2B3; --reise:#F5B355; --pers:#43C6DB; --sonst:#9AA6BF; color-scheme:dark}
+  --vertrag:#7DB0FF; --rechnung:#FF6B81; --brief:#A48BFF; --garantie:#35C2B3; --reise:#F5B355; --gehalt:#4ADE80; --pers:#43C6DB; --sonst:#9AA6BF; color-scheme:dark}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;margin:0}
 body{background:var(--bg);color:var(--fg);font-family:var(--font);font-size:16px;line-height:1.35;-webkit-font-smoothing:antialiased;padding-top:env(safe-area-inset-top,0px)}
